@@ -10,8 +10,6 @@
 #include <Python.h>
 #include "structmember.h"
 
-#include "_testembed.h"
-
 typedef struct {
 	PyObject_HEAD
 		PyObject *first;
@@ -218,12 +216,16 @@ static PyTypeObject NoddyType = {
 void enterLoop(PyObject* entryScript) {
 	for (;;)
 	{
-		std::this_thread::sleep_for(std::chrono::seconds(5));
 		PyObject* pyResult = PyObject_CallMethod(entryScript, "onTimerUpdate", "l", time(NULL));
+		std::this_thread::sleep_for(std::chrono::seconds(10));
 		if (pyResult != NULL)
+		{
 			Py_DECREF(pyResult);
-		else
+		}
+		else {
 			PyErr_PrintEx(0);
+			break;
+		}
 	}
 
 }
@@ -272,6 +274,7 @@ int main(int argc, char *argv[])
 	PyObject* entryScript = PyImport_Import(pyEntryScriptFileName);
 
 	if (entryScript == NULL) {
+		PyErr_PrintEx(0);
 		return 1;
 	}
 
