@@ -68,7 +68,7 @@ WIN32 is still required for the locale module.
 #define MS_WIN32 /* only support win32 and greater. */
 #define MS_WINDOWS
 #ifndef PYTHONPATH
-#	define PYTHONPATH L".\\DLLs;.\\lib"
+#	define PYTHONPATH L".\\DLLs;.\\lib;.\\tutorial"
 #endif
 #define NT_THREADS
 #define WITH_THREAD
