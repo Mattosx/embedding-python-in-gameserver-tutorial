@@ -217,7 +217,7 @@ void enterLoop(PyObject* entryScript) {
 	for (;;)
 	{
 		PyObject* pyResult = PyObject_CallMethod(entryScript, "onTimerUpdate", "l", time(NULL));
-		std::this_thread::sleep_for(std::chrono::seconds(10));
+		std::this_thread::sleep_for(std::chrono::seconds(5));
 		if (pyResult != NULL)
 		{
 			Py_DECREF(pyResult);
@@ -285,7 +285,7 @@ int main(int argc, char *argv[])
 		PyErr_PrintEx(0);
 
 	enterLoop(entryScript);
-
+	std::this_thread::sleep_for(std::chrono::seconds(3));
 	Py_Finalize();
 	return 0;
 }

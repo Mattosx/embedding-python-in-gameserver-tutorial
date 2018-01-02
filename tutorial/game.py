@@ -36,6 +36,7 @@ class remoteMethod(object):
         if len(msg) > 1472:
             print('msg more than mtu')
             return
+
         s.sendto(msg, realAddrKey)
 
 def _unpickle_(info):
@@ -93,6 +94,11 @@ def onMyAppRun(isBootstrap):
         global entities
         entities.append(player)
 
+        realAddrKey = (player.ipAddr, player.port)
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        s.bind(realAddrKey)
+        socketPool[realAddrKey] = s
+
 def getEntityViaPort(port):
     global portOffset
     port -= portOffset
@@ -111,7 +117,7 @@ def onTimerUpdate(dt):
     global socketPool
     for realAddrKey in list(socketPool.keys()):
         socket = socketPool[realAddrKey]
-        data, addr = socket.recvfrom(1024)
+        data, addr = socket.recvfrom(1472)
         datas = cPickle.loads(data)
         port, funcName, msg = datas
         entity = getEntityViaPort(port)
