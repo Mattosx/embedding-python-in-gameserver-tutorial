@@ -7,7 +7,14 @@
 #include "pyconfig.h"
 
 #if defined(HAVE_STD_ATOMIC)
+
+#ifdef __cplusplus
+using namespace std;
+#include <atomic>
+#else
 #include <stdatomic.h>
+#endif
+
 #endif
 
 /* This is modeled after the atomics interface from C1x, according to

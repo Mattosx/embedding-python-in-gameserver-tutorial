@@ -2,12 +2,10 @@
 #include <cstdio>
 #include <cstdlib>
 #include <iostream>
-#include <xstring>
 
 #include <chrono>
 #include <thread>
 
-#include <Python.h>
 #include "structmember.h"
 
 typedef struct {
@@ -233,26 +231,27 @@ void enterLoop(PyObject* entryScript) {
 /* Different embedding tests */
 int main(int argc, char *argv[])
 {
+	// Py_SetPythonHome(L"/home/mattos");
 	// Initialise python
 	// Py_VerboseFlag = 2;
 	Py_FrozenFlag = 1;
-
 	// Warn if tab and spaces are mixed in indentation.
 	// Py_TabcheckFlag = 1;
 	Py_NoSiteFlag = 1;
-	Py_IgnoreEnvironmentFlag = 1;
-	Py_SetProgramName(L"./_testembed");
+	// Py_IgnoreEnvironmentFlag = 1;
+	Py_SetProgramName(L"myApp");
+
 	Py_Initialize();
 	if (!Py_IsInitialized())
 	{
 		std::cout << "Script::install(): Py_Initialize is failed!\n";
 		return 1;
 	}
+	// const wchar_t * pathStr = L"../Lib:../build/lib.linux-x86_64-3.6";
+	// PySys_SetPath(pathStr);
 
 	PyObject *mMain = PyImport_AddModule("__main__");
-
 	PyObject* newModule = PyImport_AddModule("noddy4");
-
 	if (PyType_Ready(&NoddyType) < 0)
 		return 1;
 
@@ -265,8 +264,11 @@ int main(int argc, char *argv[])
 		"print('stdin: {0.encoding}:{0.errors}'.format(sys.stdin));"
 		"print('stdout: {0.encoding}:{0.errors}'.format(sys.stdout));"
 		"print('stderr: {0.encoding}:{0.errors}'.format(sys.stderr));"
-		"sys.stdout.flush()\n"
-		"print(sys.path)\n"
+		"sys.path.append('script');"
+		"print(sys.path);"
+		"from pathlib import Path;"
+		"print('home: {}'.format(str(Path.home())));"
+		"sys.stdout.flush();"
 	);
 
 	PyObject *pyEntryScriptFileName = PyUnicode_FromString("game");
