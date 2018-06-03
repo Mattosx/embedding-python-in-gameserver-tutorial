@@ -238,17 +238,14 @@ int main(int argc, char *argv[])
 	// Warn if tab and spaces are mixed in indentation.
 	// Py_TabcheckFlag = 1;
 	Py_NoSiteFlag = 1;
-	// Py_IgnoreEnvironmentFlag = 1;
-	Py_SetProgramName(L"myApp");
-
+	Py_IgnoreEnvironmentFlag = 1;
+	Py_SetProgramName(L"myapp");
 	Py_Initialize();
 	if (!Py_IsInitialized())
 	{
 		std::cout << "Script::install(): Py_Initialize is failed!\n";
 		return 1;
 	}
-	// const wchar_t * pathStr = L"../Lib:../build/lib.linux-x86_64-3.6";
-	// PySys_SetPath(pathStr);
 
 	PyObject *mMain = PyImport_AddModule("__main__");
 	PyObject* newModule = PyImport_AddModule("noddy4");
@@ -261,10 +258,11 @@ int main(int argc, char *argv[])
 
 	PyRun_SimpleString(
 		"import sys;"
+		"import os;"
 		"print('stdin: {0.encoding}:{0.errors}'.format(sys.stdin));"
 		"print('stdout: {0.encoding}:{0.errors}'.format(sys.stdout));"
 		"print('stderr: {0.encoding}:{0.errors}'.format(sys.stderr));"
-		"sys.path.append('script');"
+		"sys.path.append(os.path.abspath(os.path.join('../src/myApp/script')));"
 		"print(sys.path);"
 		"from pathlib import Path;"
 		"print('home: {}'.format(str(Path.home())));"
@@ -272,14 +270,11 @@ int main(int argc, char *argv[])
 	);
 
 	PyObject *pyEntryScriptFileName = PyUnicode_FromString("game");
-
 	PyObject* entryScript = PyImport_Import(pyEntryScriptFileName);
-
 	if (entryScript == NULL) {
 		PyErr_PrintEx(0);
 		return 1;
 	}
-
 	PyObject* pyResult = PyObject_CallMethod(entryScript, "onMyAppRun", "O", PyBool_FromLong(1));
 	if (pyResult != NULL)
 		Py_DECREF(pyResult);
