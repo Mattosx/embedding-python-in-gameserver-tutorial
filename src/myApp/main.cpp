@@ -1,12 +1,12 @@
-#include <Python.h>
 #include <cstdio>
 #include <cstdlib>
 #include <iostream>
-
 #include <chrono>
 #include <thread>
-
+#include <Python.h>
 #include "structmember.h"
+
+#include "uv.h"
 
 typedef struct {
 	PyObject_HEAD
@@ -256,6 +256,7 @@ int main(int argc, char *argv[])
 
 	PyModule_AddObject(newModule, "Noddy", (PyObject *)&NoddyType);
 
+	//add myApp script path to sys.path
 	PyRun_SimpleString(
 		"import sys;"
 		"import os;"
@@ -282,7 +283,6 @@ int main(int argc, char *argv[])
 		PyErr_PrintEx(0);
 
 	enterLoop(entryScript);
-	std::this_thread::sleep_for(std::chrono::seconds(3));
 	Py_Finalize();
 	return 0;
 }
