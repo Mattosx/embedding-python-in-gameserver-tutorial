@@ -257,9 +257,10 @@ int main(int argc, char *argv[])
 		"print(sys.path);"
 		"from pathlib import Path;"
 		"print('home: {}'.format(str(Path.home())));"
+		"print(sys.version);"
 		"sys.stdout.flush();"
 	);
-	
+
 	PyObject *mMain = PyImport_AddModule("__main__");
 	PyObject* newModule = PyImport_AddModule("noddy4");
 	if (PyType_Ready(&NoddyType) < 0){
