@@ -241,20 +241,10 @@ int main(int argc, char *argv[])
 	Py_IgnoreEnvironmentFlag = 1;
 	Py_SetProgramName(L"myapp");
 	Py_Initialize();
-	if (!Py_IsInitialized())
-	{
+	if (!Py_IsInitialized()){
 		std::cout << "Script::install(): Py_Initialize is failed!\n";
 		return 1;
 	}
-
-	PyObject *mMain = PyImport_AddModule("__main__");
-	PyObject* newModule = PyImport_AddModule("noddy4");
-	if (PyType_Ready(&NoddyType) < 0)
-		return 1;
-
-	Py_INCREF(&NoddyType);
-
-	PyModule_AddObject(newModule, "Noddy", (PyObject *)&NoddyType);
 
 	//add myApp script path to sys.path
 	PyRun_SimpleString(
@@ -269,6 +259,16 @@ int main(int argc, char *argv[])
 		"print('home: {}'.format(str(Path.home())));"
 		"sys.stdout.flush();"
 	);
+	
+	PyObject *mMain = PyImport_AddModule("__main__");
+	PyObject* newModule = PyImport_AddModule("noddy4");
+	if (PyType_Ready(&NoddyType) < 0){
+		return 1;
+	}
+		
+	Py_INCREF(&NoddyType);
+
+	PyModule_AddObject(newModule, "Noddy", (PyObject *)&NoddyType);
 
 	PyObject *pyEntryScriptFileName = PyUnicode_FromString("game");
 	PyObject* entryScript = PyImport_Import(pyEntryScriptFileName);
