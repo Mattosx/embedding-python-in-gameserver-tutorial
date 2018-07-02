@@ -5,6 +5,7 @@
 #include <assert.h>
 #include <Python.h>
 
+//genUUID64 生成的uint64 可以在分布式节点中直接使用
 inline uint64_t genUUID64()
 {
 	static uint64_t tv = (uint64_t)(time(NULL));
@@ -30,8 +31,7 @@ inline uint64_t genUUID64()
 	return (tv << 32) | rnd | lastNum++;
 }
 
-
-static int __py_readonly_descr(PyObject* self, PyObject* value, void* closure)
+static int __readonly_descr(PyObject* self, PyObject* value, void* closure)
 {
     PyErr_Format(PyExc_TypeError, "Sorry, this attribute %s is read-only", (self != NULL ? self->ob_type->tp_name : ""));
     PyErr_PrintEx(0);

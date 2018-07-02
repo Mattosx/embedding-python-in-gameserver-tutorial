@@ -13,19 +13,22 @@ static PyObject* _createEntity(PyObject* self, PyObject* args)
         PyErr_Print();
         return Py_None;
     }
+	//申请内存的时候需要知道type, 如果是脚本继承了Entity,则需要传递脚本类型比如 Avatar
 	PyObject *pObject = PyType_GenericAlloc((PyTypeObject*)createType, 0);
 	if (pObject == NULL)
 	{
 		PyErr_Print();
         return Py_None;
 	}
-
+	//在PyType_GenericAlloc 申请到的内存上进行new, 只是为了执行Entity的构造函数
     Entity* e = new(pObject) Entity();
+	fmt::printf("_createEntity type: %s\n", ((PyTypeObject*)createType)->tp_name);
 	return pObject;
-}	
+}
 
 static void Entity_dealloc(PyObject* self)	
 {
+	//先手动执行Entity的析构函数,然后再 cpython里面调用tp_free 释放内存
     static_cast<Entity*>(self)->~Entity();
     Py_TYPE(self)->tp_free((PyObject*)self);
 }
@@ -51,8 +54,8 @@ static int Entiti_setName(PyObject *self, PyObject *value, void *closure){
 }
 
 static PyObject* Entity_getId(PyObject* self, void*)
-{
-    return PyLong_FromUnsignedLongLong(static_cast<Entity*>(self)->id)
+{	
+    return PyLong_FromUnsignedLongLong(static_cast<Entity*>(self)->id);
 }
 static PyObject * Entity_sendMessage(Entity* self, PyObject *args, PyObject *kwds)
 {
@@ -80,13 +83,12 @@ PyMethodDef Entity::_scriptMethods[] = {
 };
 
 PyMemberDef Entity::_scriptMembers[] = {
-	{ "id", T_INT, offsetof(Entity, id), 0, "entity id" },
 	{ NULL }  /* Sentinel */
 };
 
 PyGetSetDef Entity::_scriptSetGeters[] = {
     {"name", (getter)Entity_getName, (setter)Entiti_setName, 0, 0},
-    {"id", (getter)Entity_getName, (setter)__py_readonly_descr, 0, 0},
+    {"id", (getter)Entity_getId, (setter)__readonly_descr, 0, 0},
     { NULL }
 };
 
@@ -122,7 +124,7 @@ PyTypeObject Entity::_typeObject = {
 	0,                         /* tp_iter */
 	0,                         /* tp_iternext */
 	Entity::_scriptMethods,             /* tp_methods */
-	Entity::_scriptMembers,             /* tp_members */
+	0,             /* tp_members */
 	Entity::_scriptSetGeters,                         /* tp_getset */
 	0,                         /* tp_base */
 	0,                         /* tp_dict */
@@ -135,14 +137,14 @@ PyTypeObject Entity::_typeObject = {
 };
 
 Entity::Entity()
-:id(genUUID64()),
-name("")
 {
-
+	id = genUUID64();
+	name = "test";
+	fmt::print("Entity() id: {}, name: {}\n", id, name);
 }
 
 Entity::~Entity(){
-
+	fmt::print("~Entity()\n");
 }
 
 int Entity::setName(const char* newName){
@@ -156,15 +158,16 @@ bool Entity::installScriptToModule(PyObject* module, const char* name){
 			return false;
     }
     Py_INCREF(&_typeObject);
+	//module 是Tutorial 模块, 接下来把 Entity类型注册到Tutorial中, 如Tutorial.Entity
     if(PyModule_AddObject(module, name, (PyObject *)&_typeObject) < 0)
     {
         PyErr_Print();
         return false;
 
     }
-
+	//对于任何继承Entity类型的对象, 只能使用 Tutorial.createEntity 来创建, Entity 类型tp_alloc tp_new都为0, 这样在脚本层面就无法 xx()这样的形式
 	if(PyModule_AddObject(module, "createEntity", PyCFunction_New(&_scriptExtraMethods, 0)) != 0)
-	{   
+	{
         PyErr_Print();
 		return false;
 	}

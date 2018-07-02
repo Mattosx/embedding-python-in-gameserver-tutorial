@@ -8,8 +8,6 @@
 #include "python_server.h"
 #include "entity.h"
 
-//PyObject* pyResult = PyObject_CallMethod(entryScript, "onTimerUpdate", "l", time(NULL));
-/* Different embedding tests */
 int main(int argc, char *argv[])
 {
 	// Py_SetPythonHome(L"/home/mattos");
@@ -23,11 +21,11 @@ int main(int argc, char *argv[])
 	Py_SetProgramName(L"myapp");
 	Py_Initialize();
 	if (!Py_IsInitialized()){
-		std::cout << "Script::install(): Py_Initialize is failed!\n";
+		fmt::print("Script::install(): Py_Initialize is failed!\n");
 		return 1;
 	}
 
-	//add myApp script path to sys.path
+	//把../src/myApp/script加入到 sys.path环境中
 	PyRun_SimpleString(
 		"import sys;"
 		"import os;"
@@ -43,32 +41,41 @@ int main(int argc, char *argv[])
 	);
 
 	PyObject *mMain = PyImport_AddModule("__main__");
-	
+
+	//在python环境中添加Tutorial模块, 和程序相关的都存储在这里
 	PyObject* newModule = PyImport_AddModule("Tutorial");
-
-	Entity::installScriptToModule(newModule, "Entity");
-
-	PyObject *pyEntryScriptFileName = PyUnicode_FromString("game");
-	PyObject* entryScript = PyImport_Import(pyEntryScriptFileName);
-	if (entryScript == NULL) {
-		PyErr_PrintEx(0);
+	bool ret = Entity::installScriptToModule(newModule, "Entity");
+	if(!ret)
+	{
+		Py_Finalize();
 		return 1;
 	}
-
+	PyObject *pyEntryScriptFileName = PyUnicode_FromString("game");
+	PyObject* entryScript = PyImport_Import(pyEntryScriptFileName);
+	if (entryScript == NULL) 
+	{
+		PyErr_PrintEx(0);
+		Py_Finalize();
+		return 1;
+	}
 	PyObject* pyResult = PyObject_CallMethod(entryScript, "onMyAppRun", "O", PyBool_FromLong(1));
 	if (pyResult != NULL)
+	{
 		Py_DECREF(pyResult);
-	else
+	}else
+	{
 		PyErr_PrintEx(0);
+		Py_Finalize();
 		return 1;
-
+	}
 	uv_loop_t* loop = uv_default_loop();
 	PythonServer pythonS("welcome to python world");
 	bool ret = pythonS.startup(loop);
-	if(!ret){
+	if(!ret)
+	{
+		Py_Finalize();
 		return 1;
 	}
-
 	uv_run(loop, UV_RUN_DEFAULT);
 	Py_Finalize();
 	return 0;

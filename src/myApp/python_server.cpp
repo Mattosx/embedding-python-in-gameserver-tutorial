@@ -286,6 +286,40 @@ void PythonConnection::handleChar()
 	readBuffer_.pop_front();
 }
 
+void PythonConnection::hookStdOutErr()
+{
+	pSysModule_ = PyImport_ImportModule("sys");
+	if (!pSysModule_)
+	{
+		return;
+	}
+
+	prevStderr_ = PyObject_GetAttrString( pSysModule_, "stderr" );
+	prevStdout_ = PyObject_GetAttrString( pSysModule_, "stdout" );
+
+	PyObject_SetAttrString( pSysModule_, "stderr", (PyObject *)this );
+	PyObject_SetAttrString( pSysModule_, "stdout", (PyObject *)this );
+	return;
+}
+
+void PythonConnection::unhookStdOutErr()
+{
+	if (prevStderr_)
+	{
+		PyObject_SetAttrString(pSysModule_, "stderr", prevStderr_);
+		Py_DECREF( prevStderr_ );
+		prevStderr_ = NULL;
+	}
+
+	if (prevStdout_)
+	{
+		PyObject_SetAttrString(pSysModule_, "stdout", prevStdout_);
+		Py_DECREF( prevStdout_ );
+		prevStdout_ = NULL;
+	}
+	pSysModule_ = NULL;
+}
+
 #if 0
 /**
  * 	This method returns true if the command would fail because of an EOF
@@ -543,20 +577,6 @@ PythonServer::~PythonServer()
  */
 bool PythonServer::startup( uv_loop_t *loop)
 {
-	// pSysModule_ = PyImport_ImportModule("sys");
-
-	// if (!pSysModule_)
-	// {
-	// 	// ERROR_MSG( "PythonServer: Failed to import sys module\n" );
-	// 	return false;
-	// }
-
-	// prevStderr_ = PyObject_GetAttrString( pSysModule_, "stderr" );
-	// prevStdout_ = PyObject_GetAttrString( pSysModule_, "stdout" );
-
-	// PyObject_SetAttrString( pSysModule_, "stderr", (PyObject *)this );
-	// PyObject_SetAttrString( pSysModule_, "stdout", (PyObject *)this );
-
 	struct sockaddr_in addr;
 	uv_tcp_init(loop, &server_);
     uv_ip4_addr("127.0.0.1", TELNET_SERVER_PORT, &addr);
@@ -574,6 +594,7 @@ bool PythonServer::startup( uv_loop_t *loop)
 
 	return true;
 }
+
 void PythonServer::onNewConnectionWrapper(uv_stream_t *server, int status){
 	PythonServer* instance = static_cast<PythonServer*>(server->data);
 	instance->onNewConnection(server, status);
@@ -616,22 +637,6 @@ void PythonServer::shutdown()
 	// Shutdown the listener socket if it is open.
 
 	// If stderr and stdout were redirected, restore them.
-
-	if (prevStderr_)
-	{
-		PyObject_SetAttrString(pSysModule_, "stderr", prevStderr_);
-		Py_DECREF( prevStderr_ );
-		prevStderr_ = NULL;
-	}
-
-	if (prevStdout_)
-	{
-		PyObject_SetAttrString(pSysModule_, "stdout", prevStdout_);
-		Py_DECREF( prevStdout_ );
-		prevStdout_ = NULL;
-	}
-
-	pSysModule_ = NULL;
 }
 
 

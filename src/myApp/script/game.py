@@ -3,8 +3,9 @@ import Tutorial
 
 import socket
 import _pickle as cPickle
-
 import random
+
+import avatar
 
 class MailBox(object):
     def __init__(self, ipAddr, port):
@@ -42,44 +43,6 @@ class remoteMethod(object):
 def _unpickle_(info):
     return MailBox(*info)
 
-class Avatar(Tutorial.Entity):
-    def __init__(self, ipAddr, port):
-        super(Avatar, self).__init__()
-        self.ipAddr = ipAddr
-        self.port = port
-
-    def onUpdate(self, dt):
-        r = random.random()
-        if r < 2:#allways
-            avatar = self.pickRandomAvatar()
-            if avatar:
-                box = avatar.getMailBox()
-                box.sayHello(self, 'hello')
-
-    def pickRandomAvatar(self):
-        ret = None
-        global entities
-        for entity in entities:
-            if entity.port == self.port:
-                continue
-            ret = entity
-
-        return ret
-
-    def sayHello(self, fBox, hello):
-        print(self.port, 'recv', hello, 'From', fBox.port)
-        fBox.onSayHelloSucc(self)
-
-    def onSayHelloSucc(self, fBox):
-        print(self.port, 'recv', 'onSayHelloSucc', 'From', fBox.port)
-
-    def getMailBox(self):
-        v = self.__reduce_ex__(None)
-        return v[0](v[1][0])
-
-    def __reduce_ex__(self, args):
-        return (_unpickle_, ((self.ipAddr, self.port),))
-
 socketPool = {}
 entities = []
 portOffset = 10000
@@ -90,8 +53,7 @@ def onMyAppRun(isBootstrap):
 
     global portOffset
     for i in range(2):
-        player = Tutorial.createEntity(Avatar)
-        print(player.id)
+        player = Tutorial.createEntity(avatar.Avatar)
         # player = Avatar('mark' + str(i), 'down', 32, '127.0.0.1', portOffset + i)
         global entities
         entities.append(player)
