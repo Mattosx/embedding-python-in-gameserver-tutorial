@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-import noddy4
+import Tutorial
 
 import socket
 import _pickle as cPickle
@@ -42,9 +42,9 @@ class remoteMethod(object):
 def _unpickle_(info):
     return MailBox(*info)
 
-class Avatar(noddy4.Noddy):
-    def __init__(self, first, last, number, ipAddr, port):
-        super(Avatar, self).__init__(first, last, number)
+class Avatar(Tutorial.Entity):
+    def __init__(self, ipAddr, port):
+        super(Avatar, self).__init__()
         self.ipAddr = ipAddr
         self.port = port
 
@@ -90,7 +90,9 @@ def onMyAppRun(isBootstrap):
 
     global portOffset
     for i in range(2):
-        player = Avatar('mark' + str(i), 'down', 32, '127.0.0.1', portOffset + i)
+        player = Tutorial.createEntity(Avatar)
+        print(player.id)
+        # player = Avatar('mark' + str(i), 'down', 32, '127.0.0.1', portOffset + i)
         global entities
         entities.append(player)
 
