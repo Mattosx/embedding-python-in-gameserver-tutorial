@@ -31,4 +31,8 @@ make
 
 cd tutorial/bin
 
-./myapp
+edit serverconf.json and ./myapp serverNode_1
+
+## access python console via telnet
+
+telnet 127.0.0.1 9999
