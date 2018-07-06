@@ -15,15 +15,15 @@ using namespace std;
 class PythonServer;
 
 #ifndef _WIN32 // WIN32PORT
-#else		   //ifndef _WIN32  // WIN32PORT
+#else					 //ifndef _WIN32  // WIN32PORT
 typedef unsigned short uint16_t;
-#endif		   //ndef _WIN32  // WIN32PORT
+#endif				 //ndef _WIN32  // WIN32PORT
 
 class PythonConnection : public PyObject
 {
-  public:
+public:
 	PythonConnection(PythonServer *owner,
-					 uv_tcp_t *client);
+									 uv_tcp_t *client);
 	virtual ~PythonConnection();
 
 	void write(const char *str);
@@ -38,7 +38,7 @@ class PythonConnection : public PyObject
 	void writeFromPython(PyObject *args);
 	static bool installScriptToModule(PyObject *module, const char *name);
 
-  private:
+private:
 	bool handleTelnetCommand();
 	bool handleVTCommand();
 	void handleLine();
@@ -73,20 +73,20 @@ class PythonConnection : public PyObject
 class PythonServer
 {
 
-  public:
+public:
 	PythonServer();
 	virtual ~PythonServer();
 
-	bool startup(uv_loop_t *loop);
+	bool startup(uv_loop_t *loop, std::string ipaddress, int port);
 	void shutdown();
 	void deleteConnection(PythonConnection *pConnection);
 
 	static void onNewConnectionWrapper(uv_stream_t *server, int status);
 	void onNewConnection(uv_stream_t *server, int status);
 
-  protected:
+protected:
 	// void printMessage( const std::string & msg );
-  private:
+private:
 	std::vector<PythonConnection *> connections_;
 
 	uv_tcp_t server_;

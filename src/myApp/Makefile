@@ -8,7 +8,7 @@ LDFLAGS = $(DEBUG_FLAG) -Wall -L../libs/lib $(LIBS) -Wl,-rpath,../src/libs/lib
 
 BIN = ../../bin/myapp
 TEST_OBJS = main.o\
-python_server.o\
+pythonServer.o\
 entity.o\
 format.o
 
@@ -18,7 +18,7 @@ $(BIN): $(TEST_OBJS)
 	$(CC) -o $@ $^ $(LDFLAGS) 
 
 $(TEST_OBJS) : %.o : %.cpp
-	$(CC) -o $@ $(CXXFLAGS) $< -I../libs/include/python3.6m -I../libs/include
+	$(CC) -o $@ $(CXXFLAGS) $< -I../libs/include/python3.6m -I../libs/include -I../libs/include/nlohmann
 
 clean : 
 	rm -f $(TEST_OBJS) $(BIN)

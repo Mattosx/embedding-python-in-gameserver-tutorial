@@ -4,85 +4,58 @@ import Tutorial
 import socket
 import _pickle as cPickle
 import random
+import json
+import errno, os
 
 import avatar
 
-class MailBox(object):
-    def __init__(self, ipAddr, port):
-        super(MailBox, self).__init__()
-        self.ipAddr = ipAddr
-        self.port = port
-
-    def __getattr__(self, name):
-        return remoteMethod(name, self.ipAddr, self.port)
-
-class remoteMethod(object):
-    def __init__(self, name, ipAddr, port):
-        super(remoteMethod, self).__init__()
-        self.name = name
-        self.ipAddr = ipAddr
-        self.port = port
-
-    def __call__(self, *args):
-        realAddrKey = (self.ipAddr, self.port)
-        global socketPool
-        if realAddrKey not in socketPool:
-            s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-            s.bind(realAddrKey)
-            socketPool[realAddrKey] = s
-
-        s = socketPool[realAddrKey]
-
-        msg = cPickle.dumps((self.port, self.name, args), -1)
-        if len(msg) > 1472:
-            print('msg more than mtu')
-            return
-
-        s.sendto(msg, realAddrKey)
-
-def _unpickle_(info):
-    return MailBox(*info)
-
-socketPool = {}
-entities = []
-portOffset = 10000
-
 def onMyAppRun(isBootstrap):
+    Tutorial.entities = dict()
+    f = open('serverconf.json', 'r', encoding='utf-8');
+    serverconf = json.loads(f.read(), encoding="utf-8")
+    serverconf = serverconf["servers"]
+    serverNodeName = Tutorial.serverNodeName
+    print('onMyAppRun', isBootstrap, serverNodeName)
+    if serverNodeName not in serverconf:
+        return
+    listenAddr = serverconf[serverNodeName]['address']
+    listenPort = serverconf[serverNodeName]['port']
+    sfd = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    sfd.setblocking(False)
+    sfd.bind((listenAddr, listenPort))
 
-    print('onMyAppRun', isBootstrap)
+    Tutorial.socketFd = sfd
 
-    global portOffset
-    for i in range(2):
-        player = Tutorial.createEntity(avatar.Avatar)
-        # player = Avatar('mark' + str(i), 'down', 32, '127.0.0.1', portOffset + i)
-        global entities
-        entities.append(player)
-        print(player, type(player), player.id, player.name)
-        realAddrKey = (player.ipAddr, player.port)
-        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        s.bind(realAddrKey)
-        socketPool[realAddrKey] = s
-
-def getEntityViaPort(port):
-    global portOffset
-    port -= portOffset
-    global entities
-    return entities[port]
+    player = Tutorial.createEntity(avatar.Avatar)
+    if not player:
+        print('Tutorial.createEntity return None')
+        return
+    player.setAddrPort(listenAddr, listenPort)
+    Tutorial.entities[player.id] = player
 
 def callEntityMethod(entity, methodName, args):
     func = getattr(entity, methodName)
     func(*args)
 
-def onTimerUpdate(dt):
-    global entities
-    for box in entities:
-        box.onUpdate(dt)
+def callRemoteEntityMethod(remoteHostAddr, remotePort, entityId, methodName, methodArgs):
+    s = Tutorial.socketFd
+    msg = cPickle.dumps((methodName, entityId, methodArgs), -1)
+    if len(msg) > 1472:
+        print('msg more than mtu, please split it')
+        return
+    s.sendto(msg, (remoteHostAddr, remotePort))
 
-    global socketPool
-    for realAddrKey in list(socketPool.keys()):
-        socket = socketPool[realAddrKey]
-        data, addr = socket.recvfrom(1472)
-        datas = cPickle.loads(data)
-        port, funcName, msg = datas
-        entity = getEntityViaPort(port)
-        callEntityMethod(entity, funcName, msg)
+def onDispatchEntityMsg():
+    socket = Tutorial.socketFd
+    try:
+        datas, addr = socket.recvfrom(1472)
+    except:
+        return
+
+    args = cPickle.loads(datas)
+    methodName, id, msg = args
+    print(args)
+    entity = Tutorial.entities.get(id)
+    if not entity:
+        return
+    callEntityMethod(entity, methodName, msg)

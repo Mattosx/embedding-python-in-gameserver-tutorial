@@ -2,14 +2,44 @@
 #include <thread>
 #include <Python.h>
 #include <structmember.h>
+#include <nlohmann/json.hpp>
 
 #include "common.h"
 #include "uv.h"
-#include "python_server.h"
+#include "pythonServer.h"
 #include "entity.h"
+
+using json = nlohmann::json;
+
+static void timer_cb(uv_timer_t *handle)
+{
+	PyObject *entry = (PyObject *)(handle->data);
+	PyObject_CallMethod(entry, "onDispatchEntityMsg", const_cast<char *>(""));
+	if (PyErr_Occurred)
+	{
+		PyErr_PrintEx(0);
+	}
+}
 
 int main(int argc, char *argv[])
 {
+	if (argc != 2)
+	{
+		fmt::print("myapp must have a nodeName arg\n");
+		return 1;
+	}
+	const char *nodeName = argv[1];
+
+	std::ifstream jsonFile("serverconf.json");
+	json confJson;
+	jsonFile >> confJson;
+	auto serverNodes = confJson["servers"];
+	auto selfconf = serverNodes[nodeName];
+	std::string listenAddr = selfconf["address"];
+	int listenPort = selfconf["port"];
+	int pythonPort = selfconf["pythonPort"];
+	fmt::print("run a node Name:{}, addr:{}, port:{}, pythonPort:{}\n", nodeName, listenAddr, listenPort, pythonPort);
+
 	// Py_SetPythonHome(L"/home/mattos");
 	// Initialise python
 	// Py_VerboseFlag = 2;
@@ -50,6 +80,8 @@ int main(int argc, char *argv[])
 		Py_Finalize();
 		return 1;
 	}
+	PyModule_AddStringConstant(newModule, "serverNodeName", nodeName);
+
 	PyObject *pyEntryScriptFileName = PyUnicode_FromString("game");
 	PyObject *entryScript = PyImport_Import(pyEntryScriptFileName);
 	if (entryScript == NULL)
@@ -71,13 +103,23 @@ int main(int argc, char *argv[])
 	}
 	uv_loop_t *loop = uv_default_loop();
 	PythonServer pythonS;
-	ret = pythonS.startup(loop);
+	ret = pythonS.startup(loop, listenAddr, pythonPort);
 	PythonConnection::installScriptToModule(mMain, "PythonConnection");
 	if (!ret)
 	{
 		Py_Finalize();
 		return 1;
 	}
+
+	uv_timer_t timer;
+	timer.data = entryScript;
+	ret = uv_timer_init(loop, &timer);
+	if (ret)
+	{
+		Py_Finalize();
+		return 1;
+	}
+	ret = uv_timer_start(&timer, timer_cb, 0, 1000);
 	uv_run(loop, UV_RUN_DEFAULT);
 	Py_Finalize();
 	return 0;

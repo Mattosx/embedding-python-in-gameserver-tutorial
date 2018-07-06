@@ -1,4 +1,4 @@
-#include "python_server.h"
+#include "pythonServer.h"
 
 #include <node.h>
 #include <grammar.h>
@@ -12,7 +12,6 @@
 
 extern grammar _PyParser_Grammar;
 
-#define TELNET_SERVER_PORT 9999
 #define DEFAULT_BACKLOG 128
 
 #define TELNET_ECHO 1
@@ -305,11 +304,6 @@ void PythonConnection::onReadData(uv_stream_t *stream, ssize_t bytesRead, const 
 	return;
 }
 
-/**
- * 	This method handles telnet protocol commands. Well actually it handles
- * 	a subset of telnet protocol commands, enough to get Linux and Windows
- *	telnet working in character mode.
- */
 bool PythonConnection::handleTelnetCommand()
 {
 	// TODO: Need to check that there is a second byte on readBuffer_.
@@ -397,10 +391,6 @@ bool PythonConnection::handleVTCommand()
 	return true;
 }
 
-/**
- * 	This method handles a single character. It appends or inserts it
- * 	into the buffer at the current position.
- */
 void PythonConnection::handleChar()
 {
 	// @todo: Optimise redraw
@@ -417,7 +407,6 @@ void PythonConnection::handleChar()
 
 void PythonConnection::hookStdOutErr()
 {
-	fmt::print("hookStdOutErr\n");
 	PyObject *pSysModule_ = PyImport_ImportModule("sys");
 	if (!pSysModule_)
 	{
@@ -435,7 +424,6 @@ void PythonConnection::hookStdOutErr()
 
 void PythonConnection::unhookStdOutErr()
 {
-	fmt::print("unhookStdOutErr\n");
 	PyObject *pSysModule_ = PyImport_ImportModule("sys");
 	if (prevStderr_)
 	{
@@ -453,37 +441,6 @@ void PythonConnection::unhookStdOutErr()
 	Py_DECREF(pSysModule_);
 }
 
-#if 0
-/**
- * 	This method returns true if the command would fail because of an EOF
- * 	error. Could use this to implement multiline commands.. but later.
- */
-static bool CheckEOF(char *str)
-{
-	node *n;
-	perrdetail err;
-	n = PyParser_ParseString(str, &_PyParser_Grammar, Py_single_input, &err);
-
-	if (n == NULL && err.error == E_EOF )
-	{
-		printf("EOF\n");
-		return true;
-	}
-
-	printf("OK\n");
-	PyNode_Free(n);
-	return false;
-}
-#endif
-
-/**
- * 	This is a variant on PyRun_SimpleString. It does basically the
- *	same thing, but uses Py_single_input, so the Python compiler
- * 	will mark the code as being interactive, and print the result
- *	if it is not None.
- *
- *	@param command		Line of Python to execute.
- */
 static int MyRun_SimpleString(char *command)
 {
 	// Ignore lines that only contain comments
@@ -513,10 +470,6 @@ static int MyRun_SimpleString(char *command)
 	return 0;
 }
 
-/**
- * 	This method handles an end of line. It executes the current command,
- *	and adds it to the history buffer.
- */
 void PythonConnection::handleLine()
 {
 	readBuffer_.pop_front();
@@ -557,7 +510,7 @@ void PythonConnection::handleLine()
 			hookStdOutErr();
 			MyRun_SimpleString((char *)currentLine_.c_str());
 			unhookStdOutErr();
-			// PyObject * pRes = PyRun_String( (char *)currentLine_.c_str(), true );
+
 			active_ = false;
 		}
 	}
@@ -569,15 +522,12 @@ void PythonConnection::handleLine()
 	this->writePrompt();
 }
 
-/**
- *	This method handles a del character.
- */
 void PythonConnection::handleDel()
 {
 
 	if (charPos_ > 0)
 	{
-		// @todo: Optimise redraw
+
 		currentLine_.erase(charPos_ - 1, 1);
 		this->write("\b" ERASE_EOL);
 		charPos_--;
@@ -591,9 +541,6 @@ void PythonConnection::handleDel()
 	readBuffer_.pop_front();
 }
 
-/**
- * 	This method handles a key up event.
- */
 void PythonConnection::handleUp()
 {
 	if (historyPos_ < (int)historyBuffer_.size() - 1)
@@ -602,7 +549,6 @@ void PythonConnection::handleUp()
 		currentLine_ = historyBuffer_[historyBuffer_.size() -
 									  historyPos_ - 1];
 
-		// @todo: Optimise redraw
 		this->write("\r" ERASE_EOL);
 		this->writePrompt();
 		this->write(currentLine_.c_str());
@@ -610,9 +556,6 @@ void PythonConnection::handleUp()
 	}
 }
 
-/**
- * 	This method handles a key down event.
- */
 void PythonConnection::handleDown()
 {
 	if (historyPos_ >= 0)
@@ -625,7 +568,6 @@ void PythonConnection::handleDown()
 			currentLine_ = historyBuffer_[historyBuffer_.size() -
 										  historyPos_ - 1];
 
-		// @todo: Optimise redraw
 		this->write("\r" ERASE_EOL);
 		this->writePrompt();
 		this->write(currentLine_.c_str());
@@ -633,9 +575,6 @@ void PythonConnection::handleDown()
 	}
 }
 
-/**
- * 	This method handles a key left event.
- */
 void PythonConnection::handleLeft()
 {
 	if (charPos_ > 0)
@@ -645,9 +584,6 @@ void PythonConnection::handleLeft()
 	}
 }
 
-/**
- * 	This method handles a key left event.
- */
 void PythonConnection::handleRight()
 {
 	if (charPos_ < currentLine_.length())
@@ -672,9 +608,6 @@ void PythonConnection::write(const char *str)
 	uv_write((uv_write_t *)req, (uv_stream_t *)pClient_, &req->buf, 1, echo_write);
 }
 
-/**
- * 	This method prints a prompt to the socket.
- */
 void PythonConnection::writePrompt()
 {
 	return this->write(multiline_.empty() ? ">>> " : "... ");
@@ -689,23 +622,11 @@ PythonServer::~PythonServer()
 	this->shutdown();
 }
 
-/*~ class PythonServer
- *	This class provides access to the Python interpreter via a TCP connection.
- *	It starts listening on a given port, and creates a new PythonConnection
- *	for every connection it receives.
- */
-
-/**
- *	This method starts up the Python server, and begins listening on the
- *	given port. It redirects Python stdout and stderr, so that they can be
- *	sent to all Python connections as well as stdout.
-
- */
-bool PythonServer::startup(uv_loop_t *loop)
+bool PythonServer::startup(uv_loop_t *loop, std::string ipaddress, int port)
 {
 	struct sockaddr_in addr;
 	uv_tcp_init(loop, &server_);
-	uv_ip4_addr("127.0.0.1", TELNET_SERVER_PORT, &addr);
+	uv_ip4_addr("0.0.0.0", port, &addr);
 
 	server_.data = this;
 	uv_tcp_bind(&server_, (const struct sockaddr *)&addr, 0);
@@ -748,16 +669,9 @@ void PythonServer::onNewConnection(uv_stream_t *server, int status)
 	}
 }
 
-/**
- * 	This method shuts down the Python server.
- * 	It closes the listener port, disconnects all connections,
- * 	and restores Python stderr and stdout.
- */
 void PythonServer::shutdown()
 {
 	std::vector<PythonConnection *>::iterator it;
-
-	// Disconnect all connections, and clear our connection list.
 
 	for (it = connections_.begin(); it != connections_.end(); it++)
 	{
@@ -765,60 +679,8 @@ void PythonServer::shutdown()
 	}
 
 	connections_.clear();
-
-	// Shutdown the listener socket if it is open.
-
-	// If stderr and stdout were redirected, restore them.
 }
 
-/**
- * 	This method is called by Python whenever there is new data for
- * 	stdout or stderror. We redirect it to all the connections, and
- * 	then print it out as normal. CRs are subsituted for CR/LF pairs
- * 	to facilitate printing on Windows.
- *
- * 	@param args		A Python tuple containing a single string argument
- */
-// void PythonServer::printMessage( const std::string & msg )
-// {
-// 	PyObject * pResult =
-// 		PyObject_CallMethod( prevStdout_, "write", "s#", msg.c_str(), msg.length() );
-// 	if (pResult)
-// 	{
-// 		Py_DECREF( pResult );
-// 	}
-// 	else
-// 	{
-// 		PyErr_Clear();
-// 	}
-
-// 	std::string cookedMsg;
-// 	cookedMsg.reserve( msg.size() );
-// 	std::string::const_iterator iter;
-// 	for (iter = msg.begin(); iter != msg.end(); iter++)
-// 	{
-// 		if (*iter == '\n')
-// 			cookedMsg += "\r\n";
-// 		else
-// 			cookedMsg += *iter;
-// 	}
-
-// 	std::vector<PythonConnection *>::iterator it;
-
-// 	for(it = connections_.begin(); it != connections_.end(); it++)
-// 	{
-// 		if ((*it)->active())
-// 		{
-// 			(*it)->write( cookedMsg.c_str() );
-// 		}
-// 	}
-// }
-
-/**
- * 	This method deletes a connection from the python server.
- *
- *	@param pConnection	The connection to be deleted.
- */
 void PythonServer::deleteConnection(PythonConnection *pConnection)
 {
 	std::vector<PythonConnection *>::iterator it;
@@ -833,6 +695,5 @@ void PythonServer::deleteConnection(PythonConnection *pConnection)
 		}
 	}
 
-	printf("PythonServer::deleteConnection: %p not found",
-		   pConnection);
+	printf("PythonServer::deleteConnection: %p not found", pConnection);
 }
