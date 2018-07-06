@@ -20,7 +20,8 @@ int main(int argc, char *argv[])
 	Py_IgnoreEnvironmentFlag = 1;
 	Py_SetProgramName(L"myapp");
 	Py_Initialize();
-	if (!Py_IsInitialized()){
+	if (!Py_IsInitialized())
+	{
 		fmt::print("Script::install(): Py_Initialize is failed!\n");
 		return 1;
 	}
@@ -37,41 +38,42 @@ int main(int argc, char *argv[])
 		"from pathlib import Path;"
 		"print('home: {}'.format(str(Path.home())));"
 		"print(sys.version);"
-		"sys.stdout.flush();"
-	);
+		"sys.stdout.flush();");
 
 	PyObject *mMain = PyImport_AddModule("__main__");
 
 	//在python环境中添加Tutorial模块, 和程序相关的都存储在这里
-	PyObject* newModule = PyImport_AddModule("Tutorial");
+	PyObject *newModule = PyImport_AddModule("Tutorial");
 	bool ret = Entity::installScriptToModule(newModule, "Entity");
-	if(!ret)
+	if (!ret)
 	{
 		Py_Finalize();
 		return 1;
 	}
 	PyObject *pyEntryScriptFileName = PyUnicode_FromString("game");
-	PyObject* entryScript = PyImport_Import(pyEntryScriptFileName);
-	if (entryScript == NULL) 
+	PyObject *entryScript = PyImport_Import(pyEntryScriptFileName);
+	if (entryScript == NULL)
 	{
 		PyErr_PrintEx(0);
 		Py_Finalize();
 		return 1;
 	}
-	PyObject* pyResult = PyObject_CallMethod(entryScript, "onMyAppRun", "O", PyBool_FromLong(1));
+	PyObject *pyResult = PyObject_CallMethod(entryScript, "onMyAppRun", "O", PyBool_FromLong(1));
 	if (pyResult != NULL)
 	{
 		Py_DECREF(pyResult);
-	}else
+	}
+	else
 	{
 		PyErr_PrintEx(0);
 		Py_Finalize();
 		return 1;
 	}
-	uv_loop_t* loop = uv_default_loop();
-	PythonServer pythonS("welcome to python world");
-	bool ret = pythonS.startup(loop);
-	if(!ret)
+	uv_loop_t *loop = uv_default_loop();
+	PythonServer pythonS;
+	ret = pythonS.startup(loop);
+	PythonConnection::installScriptToModule(mMain, "PythonConnection");
+	if (!ret)
 	{
 		Py_Finalize();
 		return 1;

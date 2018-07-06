@@ -1,7 +1,7 @@
 PLATFORM=$(shell uname)
 CC = g++
 
-DEBUG_FLAG = -O3
+DEBUG_FLAG = -O1
 CXXFLAGS  = -c $(DEBUG_FLAG) -Wall -Werror=declaration-after-statement -std=c99 -pedantic -fPIC
 LIBS = -lpython3.6m -lpthread -ldl -lutil -luv
 LDFLAGS = $(DEBUG_FLAG) -Wall -L../libs/lib $(LIBS) -Wl,-rpath,../src/libs/lib

@@ -3,10 +3,13 @@ import random
 import Tutorial
 
 class Avatar(Tutorial.Entity):
-    def __init__(self, ipAddr, port):
+
+    # 在createEntity创建申请对象空间后, 直接无参数调用了__init__
+    def __init__(self):
         super(Avatar, self).__init__()
-        self.ipAddr = ipAddr
-        self.port = port
+        print('Avatar.__init__', self.id, self.name)
+        self.ipAddr = '127.0.0.1'
+        self.port = 0
 
     def onUpdate(self, dt):
         r = random.random()
